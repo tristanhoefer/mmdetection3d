@@ -410,7 +410,9 @@ class LoadPointsFromFile(object):
                 points = np.load(pts_filename)
             else:
                 points = np.fromfile(pts_filename, dtype=np.float32)
-
+        #print("PointsLoader")
+        #print(points)
+        #print("PointsLoader")
         return points
 
     def __call__(self, results):
@@ -454,6 +456,10 @@ class LoadPointsFromFile(object):
         points = points_class(
             points, points_dim=points.shape[-1], attribute_dims=attribute_dims)
         results['points'] = points
+
+        #print("ResultPointsLoader")
+        #print(results)
+        #print("ResultPointLoader")
 
         return results
 

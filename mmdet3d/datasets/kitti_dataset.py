@@ -94,7 +94,7 @@ class KittiDataset(Custom3DDataset):
             str: Name of the point cloud file.
         """
         pts_filename = osp.join(self.root_split, self.pts_prefix,
-                                f'{idx:06d}.bin')
+                                f'{idx:010d}.bin') #this was changed by me
         return pts_filename
 
     def get_data_info(self, index):
@@ -474,7 +474,7 @@ class KittiDataset(Custom3DDataset):
                 annos.append(anno)
 
             if submission_prefix is not None:
-                curr_file = f'{submission_prefix}/{sample_idx:06d}.txt'
+                curr_file = f'{submission_prefix}/{sample_idx:010d}.txt'
                 with open(curr_file, 'w') as f:
                     bbox = anno['bbox']
                     loc = anno['location']
@@ -596,7 +596,7 @@ class KittiDataset(Custom3DDataset):
             print(f'Saving KITTI submission to {submission_prefix}')
             for i, anno in enumerate(det_annos):
                 sample_idx = self.data_infos[i]['image']['image_idx']
-                cur_det_file = f'{submission_prefix}/{sample_idx:06d}.txt'
+                cur_det_file = f'{submission_prefix}/{sample_idx:010d}.txt'
                 with open(cur_det_file, 'w') as f:
                     bbox = anno['bbox']
                     loc = anno['location']

@@ -34,14 +34,25 @@ class VoxelNet(SingleStage3DDetector):
             init_cfg=init_cfg,
             pretrained=pretrained)
         self.voxel_layer = Voxelization(**voxel_layer)
+        #print("Voxel Layer")
+        #print(self.voxel_layer)
+        #print("Voxel Layer End")
         self.voxel_encoder = builder.build_voxel_encoder(voxel_encoder)
         self.middle_encoder = builder.build_middle_encoder(middle_encoder)
 
     def extract_feat(self, points, img_metas=None):
         """Extract features from points."""
         voxels, num_points, coors = self.voxelize(points)
+        #print(coors)
         voxel_features = self.voxel_encoder(voxels, num_points, coors)
+        #print("Voxel features")
+        #print(voxel_features)
         batch_size = coors[-1, 0].item() + 1
+
+        #print("Middle Encoder")
+        #print(self.middle_encoder(voxel_features, coors, batch_size))
+        #print("Backbone")
+        #print(self.backbone(x))
         x = self.middle_encoder(voxel_features, coors, batch_size)
         x = self.backbone(x)
         if self.with_neck:
@@ -53,8 +64,19 @@ class VoxelNet(SingleStage3DDetector):
     def voxelize(self, points):
         """Apply hard voxelization to points."""
         voxels, coors, num_points = [], [], []
+        #print("Points")
+        #print(points)
         for res in points:
+            #print("Res")
+            #print(res)
+            #print("Res End")
             res_voxels, res_coors, res_num_points = self.voxel_layer(res)
+            #print("Res Voxels")
+            #print(res_voxels)
+            #print("Res Voxels End")
+            #print("Res_Coors")
+            #print(res_coors)
+            #print("Res Coors End")
             voxels.append(res_voxels)
             coors.append(res_coors)
             num_points.append(res_num_points)

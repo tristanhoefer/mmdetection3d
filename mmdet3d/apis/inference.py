@@ -99,6 +99,9 @@ def inference_detector(model, pcd):
     # build the data pipeline
     test_pipeline = deepcopy(cfg.data.test.pipeline)
     test_pipeline = Compose(test_pipeline)
+    #print("Test pipeline")
+    #print(test_pipeline)
+    #print("Test pipeline")
     box_type_3d, box_mode_3d = get_box_type(cfg.data.test.box_type_3d)
 
     if isinstance(pcd, str):
@@ -138,6 +141,9 @@ def inference_detector(model, pcd):
             mask_fields=[],
             seg_fields=[])
     data = test_pipeline(data)
+    print("Data")
+    print(data)
+    print("Data")
     data = collate([data], samples_per_gpu=1)
     if next(model.parameters()).is_cuda:
         # scatter to specified GPU
@@ -483,7 +489,7 @@ def show_proj_det_result_meshlab(data,
 
 def show_result_meshlab(data,
                         result,
-                        out_dir='mmdet3d-output',
+                        out_dir,
                         score_thr=0.0,
                         show=False,
                         snapshot=False,
@@ -495,7 +501,6 @@ def show_result_meshlab(data,
         data (dict): Contain data from pipeline.
         result (dict): Predicted result from model.
         out_dir (str): Directory to save visualized result.
-            Default: mmdet3d-output
         score_thr (float, optional): Minimum score of bboxes to be shown.
             Default: 0.0
         show (bool, optional): Visualize the results online. Defaults to False.

@@ -13,7 +13,9 @@ def single_gpu_test(model,
                     data_loader,
                     show=False,
                     out_dir=None,
-                    show_score_thr=0.3):
+                    show_score_thr=0.01): #originally was set to 0.3
+
+                    
     """Test model with single gpu.
 
     This method tests model with single gpu and gives the 'show' option.
