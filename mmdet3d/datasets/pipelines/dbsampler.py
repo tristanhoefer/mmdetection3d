@@ -322,8 +322,13 @@ class DataBaseSampler(object):
         Returns:
             list[dict]: Valid samples after collision test.
         """
+        #print("Class Name: " + str(name))
+        #print("Number of sampled boxes: " + str(num))
+        #print(gt_bboxes)
         sampled = self.sampler_dict[name].sample(num)
         sampled = copy.deepcopy(sampled)
+        #print("sampled: ")
+        #print(sampled)
         num_gt = gt_bboxes.shape[0]
         num_sampled = len(sampled)
         gt_bboxes_bv = box_np_ops.center_to_corner_box2d(

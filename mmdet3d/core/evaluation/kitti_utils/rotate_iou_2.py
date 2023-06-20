@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 #####################
 # Based on https://github.com/hongzhenwang/RRPN-revise
 # Licensed under The MIT License
@@ -10,19 +9,17 @@ import numba
 import numpy as np
 from numba import cuda
 
-
 @numba.jit(nopython=True)
 def div_up(m, n):
     return m // n + (m % n > 0)
 
-
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], float32[:], float32[:])', device=True, inline=True)
 def trangle_area(a, b, c):
     return ((a[0] - c[0]) * (b[1] - c[1]) - (a[1] - c[1]) *
             (b[0] - c[0])) / 2.0
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], int32)', device=True, inline=True)
 def area(int_pts, num_of_inter):
     area_val = 0.0
     for i in range(num_of_inter - 2):
@@ -32,7 +29,7 @@ def area(int_pts, num_of_inter):
     return area_val
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], int32)', device=True, inline=True)
 def sort_vertex_in_convex_polygon(int_pts, num_of_inter):
     if num_of_inter > 0:
         center = cuda.local.array((2, ), dtype=numba.float32)
@@ -72,7 +69,10 @@ def sort_vertex_in_convex_polygon(int_pts, num_of_inter):
                 int_pts[j * 2 + 1] = ty
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(
+    '(float32[:], float32[:], int32, int32, float32[:])',
+    device=True,
+    inline=True)
 def line_segment_intersection(pts1, pts2, i, j, temp_pts):
     A = cuda.local.array((2, ), dtype=numba.float32)
     B = cuda.local.array((2, ), dtype=numba.float32)
@@ -115,7 +115,10 @@ def line_segment_intersection(pts1, pts2, i, j, temp_pts):
     return False
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit(
+    '(float32[:], float32[:], int32, int32, float32[:])',
+    device=True,
+    inline=True)
 def line_segment_intersection_v1(pts1, pts2, i, j, temp_pts):
     a = cuda.local.array((2, ), dtype=numba.float32)
     b = cuda.local.array((2, ), dtype=numba.float32)
@@ -154,7 +157,7 @@ def line_segment_intersection_v1(pts1, pts2, i, j, temp_pts):
     return True
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32, float32, float32[:])', device=True, inline=True)
 def point_in_quadrilateral(pt_x, pt_y, corners):
     ab0 = corners[2] - corners[0]
     ab1 = corners[3] - corners[1]
@@ -169,14 +172,12 @@ def point_in_quadrilateral(pt_x, pt_y, corners):
     abap = ab0 * ap0 + ab1 * ap1
     adad = ad0 * ad0 + ad1 * ad1
     adap = ad0 * ap0 + ad1 * ap1
-    #bug fix for 3d and bev evaluation
-    #introduce eps=0.0001 to avoid the float equal for exactly the same bboxes
+
     eps=0.0001
     return abab >= abap-eps and abap >= 0-eps and adad >= adap-eps and adap >= 0-eps
-    #return abab >= abap and abap >= 0 and adad >= adap and adap >= 0
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], float32[:], float32[:])', device=True, inline=True)
 def quadrilateral_intersection(pts1, pts2, int_pts):
     num_of_inter = 0
     for i in range(4):
@@ -200,7 +201,7 @@ def quadrilateral_intersection(pts1, pts2, int_pts):
     return num_of_inter
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], float32[:])', device=True, inline=True)
 def rbbox_to_corners(corners, rbbox):
     # generate clockwise corners and rotate it clockwise
     angle = rbbox[4]
@@ -221,22 +222,14 @@ def rbbox_to_corners(corners, rbbox):
     corners_y[2] = y_d / 2
     corners_y[3] = -y_d / 2
     for i in range(4):
-        corners[2 * i] = a_cos * corners_x[i] + a_sin * corners_y[i] + center_x
-        corners[2 * i +
-                1] = -a_sin * corners_x[i] + a_cos * corners_y[i] + center_y
+        corners[2 *
+                i] = a_cos * corners_x[i] + a_sin * corners_y[i] + center_x
+        corners[2 * i
+                + 1] = -a_sin * corners_x[i] + a_cos * corners_y[i] + center_y
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], float32[:])', device=True, inline=True)
 def inter(rbbox1, rbbox2):
-    """Compute intersection of two rotated boxes.
-
-    Args:
-        rbox1 (np.ndarray, shape=[5]): Rotated 2d box.
-        rbox2 (np.ndarray, shape=[5]): Rotated 2d box.
-
-    Returns:
-        float: Intersection of two rotated boxes.
-    """
     corners1 = cuda.local.array((8, ), dtype=numba.float32)
     corners2 = cuda.local.array((8, ), dtype=numba.float32)
     intersection_corners = cuda.local.array((16, ), dtype=numba.float32)
@@ -252,21 +245,8 @@ def inter(rbbox1, rbbox2):
     return area(intersection_corners, num_intersection)
 
 
-@cuda.jit(device=True, inline=True)
+@cuda.jit('(float32[:], float32[:], int32)', device=True, inline=True)
 def devRotateIoUEval(rbox1, rbox2, criterion=-1):
-    """Compute rotated iou on device.
-
-    Args:
-        rbox1 (np.ndarray, shape=[5]): Rotated 2d box.
-        rbox2 (np.ndarray, shape=[5]): Rotated 2d box.
-        criterion (int, optional): Indicate different type of iou.
-            -1 indicate `area_inter / (area1 + area2 - area_inter)`,
-            0 indicate `area_inter / area1`,
-            1 indicate `area_inter / area2`.
-
-    Returns:
-        float: iou between two input boxes.
-    """
     area1 = rbox1[2] * rbox1[3]
     area2 = rbox2[2] * rbox2[3]
     area_inter = inter(rbox1, rbox2)
@@ -279,30 +259,8 @@ def devRotateIoUEval(rbox1, rbox2, criterion=-1):
     else:
         return area_inter
 
-
-@cuda.jit(
-    '(int64, int64, float32[:], float32[:], float32[:], int32)',
-    fastmath=False)
-def rotate_iou_kernel_eval(N,
-                           K,
-                           dev_boxes,
-                           dev_query_boxes,
-                           dev_iou,
-                           criterion=-1):
-    """Kernel of computing rotated IoU. This function is for bev boxes in
-    camera coordinate system ONLY (the rotation is clockwise).
-
-    Args:
-        N (int): The number of boxes.
-        K (int): The number of query boxes.
-        dev_boxes (np.ndarray): Boxes on device.
-        dev_query_boxes (np.ndarray): Query boxes on device.
-        dev_iou (np.ndarray): Computed iou to return.
-        criterion (int, optional): Indicate different type of iou.
-            -1 indicate `area_inter / (area1 + area2 - area_inter)`,
-            0 indicate `area_inter / area1`,
-            1 indicate `area_inter / area2`.
-    """
+@cuda.jit('(int64, int64, float32[:], float32[:], float32[:], int32)', fastmath=False)
+def rotate_iou_kernel_eval(N, K, dev_boxes, dev_query_boxes, dev_iou, criterion=-1):
     threadsPerBlock = 8 * 8
     row_start = cuda.blockIdx.x
     col_start = cuda.blockIdx.y
@@ -329,39 +287,29 @@ def rotate_iou_kernel_eval(N,
     cuda.syncthreads()
     if tx < row_size:
         for i in range(col_size):
-            offset = (
-                row_start * threadsPerBlock * K + col_start * threadsPerBlock +
-                tx * K + i)
+            offset = row_start * threadsPerBlock * K + col_start * threadsPerBlock + tx * K + i
             dev_iou[offset] = devRotateIoUEval(block_qboxes[i * 5:i * 5 + 5],
-                                               block_boxes[tx * 5:tx * 5 + 5],
-                                               criterion)
+                                           block_boxes[tx * 5:tx * 5 + 5], criterion)
 
 
 def rotate_iou_gpu_eval(boxes, query_boxes, criterion=-1, device_id=0):
-    """Rotated box iou running in gpu. 500x faster than cpu version (take 5ms
-    in one example with numba.cuda code). convert from [this project](
-    https://github.com/hongzhenwang/RRPN-revise/tree/master/lib/rotation).
-
-    This function is for bev boxes in camera coordinate system ONLY
-    (the rotation is clockwise).
-
+    """rotated box iou running in gpu. 500x faster than cpu version
+    (take 5ms in one example with numba.cuda code).
+    convert from [this project](
+        https://github.com/hongzhenwang/RRPN-revise/tree/master/lib/rotation).
+    
     Args:
-        boxes (torch.Tensor): rbboxes. format: centers, dims,
-            angles(clockwise when positive) with the shape of [N, 5].
-        query_boxes (torch.FloatTensor, shape=(K, 5)):
-            rbboxes to compute iou with boxes.
-        device_id (int, optional): Defaults to 0. Device to use.
-        criterion (int, optional): Indicate different type of iou.
-            -1 indicate `area_inter / (area1 + area2 - area_inter)`,
-            0 indicate `area_inter / area1`,
-            1 indicate `area_inter / area2`.
-
+        boxes (float tensor: [N, 5]): rbboxes. format: centers, dims, 
+            angles(clockwise when positive)
+        query_boxes (float tensor: [K, 5]): [description]
+        device_id (int, optional): Defaults to 0. [description]
+    
     Returns:
-        np.ndarray: IoU results.
+        [type]: [description]
     """
+    box_dtype = boxes.dtype
     boxes = boxes.astype(np.float32)
     query_boxes = query_boxes.astype(np.float32)
-
     N = boxes.shape[0]
     K = query_boxes.shape[0]
     iou = np.zeros((N, K), dtype=np.float32)
@@ -370,14 +318,13 @@ def rotate_iou_gpu_eval(boxes, query_boxes, criterion=-1, device_id=0):
     threadsPerBlock = 8 * 8
     cuda.select_device(device_id)
     blockspergrid = (div_up(N, threadsPerBlock), div_up(K, threadsPerBlock))
-
+    
     stream = cuda.stream()
     with stream.auto_synchronize():
         boxes_dev = cuda.to_device(boxes.reshape([-1]), stream)
         query_boxes_dev = cuda.to_device(query_boxes.reshape([-1]), stream)
         iou_dev = cuda.to_device(iou.reshape([-1]), stream)
-        rotate_iou_kernel_eval[blockspergrid, threadsPerBlock,
-                               stream](N, K, boxes_dev, query_boxes_dev,
-                                       iou_dev, criterion)
+        rotate_iou_kernel_eval[blockspergrid, threadsPerBlock, stream](
+            N, K, boxes_dev, query_boxes_dev, iou_dev, criterion)
         iou_dev.copy_to_host(iou.reshape([-1]), stream=stream)
     return iou.astype(boxes.dtype)

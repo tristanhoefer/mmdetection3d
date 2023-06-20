@@ -78,8 +78,8 @@ def rotation_3d_in_axis(points,
             ])
         elif axis == 2 or axis == -1:
             rot_mat_T = torch.stack([
-                torch.stack([rot_cos, rot_sin, zeros]),
-                torch.stack([-rot_sin, rot_cos, zeros]),
+                torch.stack([rot_cos, -rot_sin, zeros]),
+                torch.stack([rot_sin, rot_cos, zeros]), #muss hier eventuell das "-" bei rot_sin getauscht werden?
                 torch.stack([zeros, zeros, ones])
             ])
         elif axis == 0 or axis == -3:
@@ -103,7 +103,7 @@ def rotation_3d_in_axis(points,
     if points.shape[0] == 0:
         points_new = points
     else:
-        points_new = torch.einsum('aij,jka->aik', points, rot_mat_T)
+        points_new = torch.einsum('aij,jka->aik', points, rot_mat_T) #ist das das gleiche wie np.dot muss nur einsum sein weil hier alle aufeinmal?
 
     if batch_free:
         points_new = points_new.squeeze(0)

@@ -65,6 +65,7 @@ def _draw_bboxes(bbox3d,
                  points_in_box_color=(1, 0, 0),
                  rot_axis=2,
                  center_mode='lidar_bottom',
+                 #center_mode='camera_bottom',
                  mode='xyz'):
     """Draw bbox on visualizer and change the color of points inside bbox3d.
 
@@ -370,6 +371,7 @@ class Visualizer(object):
                  points_in_box_color=(1, 0, 0),
                  rot_axis=2,
                  center_mode='lidar_bottom',
+                 #center_mode='camera_bottom',
                  mode='xyz'):
         super(Visualizer, self).__init__()
         assert 0 <= rot_axis <= 2

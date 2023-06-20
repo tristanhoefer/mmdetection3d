@@ -350,7 +350,7 @@ def corner_to_surfaces_3d(corners):
     return surfaces
 
 
-def points_in_rbbox(points, rbbox, z_axis=2, origin=(0.5, 0.5, 0)):
+def points_in_rbbox(points, rbbox, z_axis=2, origin=(0.5, 0.5, 0)): #origin müsste eventuell der camera origin sein (0.5, 1.0, 0.5)
     """Check points in rotated bbox and return indices.
 
     Note:
@@ -369,8 +369,9 @@ def points_in_rbbox(points, rbbox, z_axis=2, origin=(0.5, 0.5, 0)):
     """
     # TODO: this function is different from PointCloud3D, be careful
     # when start to use nuscene, check the input
-    rbbox_corners = center_to_corner_box3d(
-        rbbox[:, :3], rbbox[:, 3:6], rbbox[:, 6], origin=origin, axis=z_axis)
+    #rbbox_corners = center_to_corner_box3d(
+    #    rbbox[:, :3], rbbox[:, 3:6], rbbox[:, 6], origin=origin, axis=z_axis)
+    rbbox_corners = boxes3d_to_corners3d_lidar(rbbox)
     surfaces = corner_to_surfaces_3d(rbbox_corners)
     indices = points_in_convex_polygon_3d_jit(points[:, :3], surfaces)
     return indices
@@ -801,8 +802,8 @@ def boxes3d_to_corners3d_lidar(boxes3d, bottom_center=True):
     zeros, ones = np.zeros(
         ry.size, dtype=np.float32), np.ones(
             ry.size, dtype=np.float32)
-    rot_list = np.array([[np.cos(ry), np.sin(ry), zeros],
-                         [-np.sin(ry), np.cos(ry), zeros],
+    rot_list = np.array([[np.cos(ry), -np.sin(ry), zeros], #aenderung: hier bei np.sin das minus vertauscht
+                         [np.sin(ry), np.cos(ry), zeros],
                          [zeros, zeros, ones]])  # (3, 3, N)
     R_list = np.transpose(rot_list, (2, 0, 1))  # (N, 3, 3)
 

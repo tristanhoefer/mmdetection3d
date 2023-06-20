@@ -118,6 +118,7 @@ def test_do_eval():
                                    [[0., 0.], [0., 0.], [0., 0.]],
                                    [[0., 0.], [1.58140643, 1.58140643],
                                     [1.58140643, 1.58140643]]])
+    #print(mAP11_bbox)
     assert np.allclose(mAP11_bbox, expected_mAP11_bbox)
     assert np.allclose(mAP11_bev, expected_mAP11_bev)
     assert np.allclose(mAP11_3d, expected_mAP11_3d)
@@ -265,3 +266,7 @@ def test_eval_class():
     assert np.isclose(recall_sum, 16)
     assert np.isclose(precision_sum, 16)
     assert np.isclose(orientation_sum, 10.252829201850309)
+
+test_do_eval()
+test_eval_class()
+test_kitti_eval()

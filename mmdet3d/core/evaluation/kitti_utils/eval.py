@@ -5,6 +5,8 @@ import io as sysio
 import numba
 import numpy as np
 
+#numba.config.THREADING_LAYER = 'threadsafe'
+numba.config.THREADING_LAYER = 'workqueue'
 
 @numba.jit
 def get_thresholds(scores: np.ndarray, num_gt, num_sample_pts=41):
@@ -27,6 +29,60 @@ def get_thresholds(scores: np.ndarray, num_gt, num_sample_pts=41):
     return thresholds
 
 
+#this version assumes image data, need to adapt this to use Lidar only
+
+def clean_data(gt_anno, dt_anno, current_class, difficulty):
+    #class_names = ["car", "pedestrian", "cyclist"]
+    class_names = ["car", "pedestrian", "cyclist"]
+    dc_bboxes = []
+    ignored_gt = []
+    ignored_dt = []
+    current_cls_name = class_names[current_class].lower()
+    num_gt = len(gt_anno["name"])
+    num_dt = len(dt_anno["name"])
+    num_valid_gt = 0
+
+    # Ground truths
+    for i in range(num_gt):
+        gt_name = gt_anno["name"][i].lower()
+        if gt_name == current_cls_name:
+            valid_class = 1
+        elif (
+            current_cls_name == "Pedestrian".lower()
+            and "Person_sitting".lower() == gt_name
+        ):
+            valid_class = 0
+        elif current_cls_name == "Car".lower() and "Van".lower() == gt_name:
+            valid_class = 0
+        else:
+            valid_class = -1
+
+        if valid_class == 1:
+            ignored_gt.append(0)
+            num_valid_gt += 1
+        elif valid_class == 0 or valid_class == 1:
+            ignored_gt.append(1)
+        else:
+            ignored_gt.append(-1)
+        if gt_anno["name"][i] == "DontCare":
+            dc_bboxes.append(gt_anno["bbox"][i])
+
+    # Predicted
+    for i in range(num_dt):
+        if dt_anno["name"][i].lower() == current_cls_name:
+            valid_class = 1
+        else:
+            valid_class = -1
+
+        if valid_class == 1:
+            ignored_dt.append(0)
+        else:
+            ignored_dt.append(-1)
+
+    return num_valid_gt, ignored_gt, ignored_dt, dc_bboxes
+
+
+"""
 def clean_data(gt_anno, dt_anno, current_class, difficulty):
     CLASS_NAMES = ['car', 'pedestrian', 'cyclist']
     MIN_HEIGHT = [40, 25, 25]
@@ -41,6 +97,7 @@ def clean_data(gt_anno, dt_anno, current_class, difficulty):
         bbox = gt_anno['bbox'][i]
         gt_name = gt_anno['name'][i].lower()
         height = bbox[3] - bbox[1]
+        #height = 100
         valid_class = -1
         if (gt_name == current_cls_name):
             valid_class = 1
@@ -71,7 +128,8 @@ def clean_data(gt_anno, dt_anno, current_class, difficulty):
             valid_class = 1
         else:
             valid_class = -1
-        height = abs(dt_anno['bbox'][i, 3] - dt_anno['bbox'][i, 1])
+        #height = abs(dt_anno['bbox'][i, 3] - dt_anno['bbox'][i, 1])
+        height = 100
         if height < MIN_HEIGHT[difficulty]:
             ignored_dt.append(1)
         elif valid_class == 1:
@@ -80,7 +138,7 @@ def clean_data(gt_anno, dt_anno, current_class, difficulty):
             ignored_dt.append(-1)
 
     return num_valid_gt, ignored_gt, ignored_dt, dc_bboxes
-
+"""
 
 @numba.jit(nopython=True)
 def image_box_overlap(boxes, query_boxes, criterion=-1):
@@ -178,7 +236,7 @@ def compute_statistics_jit(overlaps,
     dt_scores = dt_datas[:, -1]
     dt_alphas = dt_datas[:, 4]
     gt_alphas = gt_datas[:, 4]
-    dt_bboxes = dt_datas[:, :4]
+    dt_bboxes = dt_datas[:, :7] #warum hatte ich hier zeitweise :7 benutzt?
     # gt_bboxes = gt_datas[:, :4]
 
     assigned_detection = [False] * det_size
@@ -388,11 +446,15 @@ def calculate_iou_partly(gt_annos, dt_annos, metric, num_parts=50):
             rots = np.concatenate([a['rotation_y'] for a in gt_annos_part], 0)
             gt_boxes = np.concatenate([loc, dims, rots[..., np.newaxis]],
                                       axis=1)
+            #print("!!!GT Boxes!!!")
+            #print(gt_boxes)
             loc = np.concatenate([a['location'] for a in dt_annos_part], 0)
             dims = np.concatenate([a['dimensions'] for a in dt_annos_part], 0)
             rots = np.concatenate([a['rotation_y'] for a in dt_annos_part], 0)
             dt_boxes = np.concatenate([loc, dims, rots[..., np.newaxis]],
                                       axis=1)
+            #print("!!!DT Boxes!!!")
+            #print(dt_boxes)
             overlap_part = d3_box_overlap(gt_boxes,
                                           dt_boxes).astype(np.float64)
         else:
@@ -437,9 +499,11 @@ def _prepare_data(gt_annos, dt_annos, current_class, difficulty):
         dontcares.append(dc_bboxes)
         total_num_valid_gt += num_valid_gt
         gt_datas = np.concatenate(
-            [gt_annos[i]['bbox'], gt_annos[i]['alpha'][..., np.newaxis]], 1)
+            #[gt_annos[i]['bbox'], gt_annos[i]['alpha'][..., np.newaxis]], 1)
+            [gt_annos[i]['location'], gt_annos[i]['dimensions'], gt_annos[i]['rotation_y'][..., np.newaxis]], 1) #für lidar only muss das hier verwendet werden neue Änderung: nun rotation_y anstatt alpha
         dt_datas = np.concatenate([
-            dt_annos[i]['bbox'], dt_annos[i]['alpha'][..., np.newaxis],
+            dt_annos[i]['location'], dt_annos[i]['dimensions'], dt_annos[i]['rotation_y'][..., np.newaxis], #für lidar only muss das hier verwendet werden 
+            #dt_annos[i]['bbox'], dt_annos[i]['alpha'][..., np.newaxis],
             dt_annos[i]['score'][..., np.newaxis]
         ], 1)
         gt_datas_list.append(gt_datas)
@@ -645,11 +709,11 @@ def do_coco_style_eval(gt_annos, dt_annos, current_classes, overlap_ranges,
     min_overlaps = np.zeros([10, *overlap_ranges.shape[1:]])
     for i in range(overlap_ranges.shape[1]):
         for j in range(overlap_ranges.shape[2]):
-            min_overlaps[:, i, j] = np.linspace(*overlap_ranges[:, i, j])
+            #min_overlaps[:, i, j] = np.linspace(*overlap_ranges[:, i, j])
+            min_overlaps[:, i, j] = np.linspace(overlap_ranges[0, i, j], overlap_ranges[1, i, j], num=10)
     mAP_bbox, mAP_bev, mAP_3d, mAP_aos, _, _, \
         _, _ = do_eval(gt_annos, dt_annos,
-                       current_classes, min_overlaps,
-                       compute_aos)
+                       current_classes, min_overlaps)
     # ret: [num_class, num_diff, num_minoverlap]
     mAP_bbox = mAP_bbox.mean(-1)
     mAP_bev = mAP_bev.mean(-1)
@@ -687,7 +751,7 @@ def kitti_eval(gt_annos,
     min_overlaps = np.stack([overlap_0_7, overlap_0_5], axis=0)  # [2, 3, 5]
     class_to_name = {
         0: 'Car',
-        1: 'Pedestrian',
+        1: 'Pedestrian', #Änderung: Cyclist und Pedestrian hier vertauscht ACHTUNG: Änderung rückgängig gemacht
         2: 'Cyclist',
         3: 'Van',
         4: 'Person_sitting',
@@ -943,8 +1007,8 @@ def kitti_eval_coco_style(gt_annos, dt_annos, current_classes):
         result += print_str((f'3d   AP:{mAP3d[j, 0]:.2f}, '
                              f'{mAP3d[j, 1]:.2f}, '
                              f'{mAP3d[j, 2]:.2f}'))
-        if compute_aos:
-            result += print_str((f'aos  AP:{mAPaos[j, 0]:.2f}, '
-                                 f'{mAPaos[j, 1]:.2f}, '
-                                 f'{mAPaos[j, 2]:.2f}'))
+        #if compute_aos:
+        #    result += print_str((f'aos  AP:{mAPaos[j, 0]:.2f}, '
+        #                         f'{mAPaos[j, 1]:.2f}, '
+        #                         f'{mAPaos[j, 2]:.2f}'))
     return result

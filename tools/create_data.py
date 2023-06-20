@@ -8,6 +8,7 @@ from tools.data_converter import lyft_converter as lyft_converter
 from tools.data_converter import nuscenes_converter as nuscenes_converter
 from tools.data_converter.create_gt_database import (
     GTDatabaseCreater, create_groundtruth_database)
+from tools.data_converter import lidaronly_converter as lidaronly_converter
 
 
 def kitti_data_prep(root_path,
@@ -50,6 +51,25 @@ def kitti_data_prep(root_path,
         mask_anno_path='instances_train.json',
         with_mask=(version == 'mask'))
 
+def lidaronly_data_prep(root_path, info_prefix, version, out_dir):
+    """Prepare related data for base dataset with pointclouds
+    and annotations.
+    Related data consists of '.pkl' files recording basic infos,
+    3D annotations and grobaseundtruth database.
+    Args:
+        root_path (str): Path of dataset root.
+        info_prefix (str): The prefix of info filenames.
+        version (str): Dataset version.
+        out_dir (str): Output directory of the groundtruth database info.
+    """
+    lidaronly_converter.create_base_info_file(root_path, info_prefix)
+    create_groundtruth_database(
+        'LidarOnlyDataset',
+        root_path,
+        info_prefix,
+        f'{out_dir}/{info_prefix}_infos_train.pkl',
+        relative_path=False,
+        with_mask=False)
 
 def nuscenes_data_prep(root_path,
                        info_prefix,
@@ -311,3 +331,9 @@ if __name__ == '__main__':
             num_points=args.num_points,
             out_dir=args.out_dir,
             workers=args.workers)
+    elif args.dataset == 'lidaronly':
+        lidaronly_data_prep(
+            root_path=args.root_path,
+            info_prefix=args.extra_tag,
+            version=args.version,
+            out_dir=args.out_dir)

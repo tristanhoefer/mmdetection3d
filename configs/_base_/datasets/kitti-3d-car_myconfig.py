@@ -1,47 +1,23 @@
 # dataset settings
-#dataset_type = 'KittiDataset'
 dataset_type = 'LidarOnlyDataset'
-#data_root = '/home/hoefer/Documents/mmdetection3d/data/5player_intersection/'
 data_root = '/home/hoefer/Documents/mmdetection3d/data/Pointpillar_Finetuning/'
-class_names = ['Pedestrian', 'Cyclist', 'Car']
-#class_names = ['Cyclist', 'Car']
-#class_names = ['Car']
-
-#point_cloud_range = [0, -40, -3, 70.4, 40, 1]
-#point_cloud_range = [54.335594, -157.8649, -0.00333486407, 280.4691, 2.9748741, 20.15723]
-#point_cloud_range= [-1000, -1000, -1000, 1000, 1000, 1000]
-point_cloud_range=[0, -39.68, -3, 69.12, 39.68, 1]
+class_names = ['Car']
+point_cloud_range = [0, -40, -3, 70.4, 40, 1]
 input_modality = dict(use_lidar=True, use_camera=False)
+db_sampler = dict(
+    data_root=data_root,
+    info_path=data_root + 'kitti_dbinfos_train.pkl',
+    rate=1.0,
+    prepare=dict(filter_by_difficulty=[-1], filter_by_min_points=dict(Car=5)),
+    classes=class_names,
+    sample_groups=dict(Car=15))
 
 file_client_args = dict(backend='disk')
 # Uncomment the following if use ceph or other file clients.
 # See https://mmcv.readthedocs.io/en/latest/api.html#mmcv.fileio.FileClient
 # for more details.
 # file_client_args = dict(
-#     backend='petrel',
-#     path_mapping=dict({
-#         './data/kitti/':
-#         's3://openmmlab/datasets/detection3d/kitti/',
-#         'data/kitti/':
-#         's3://openmmlab/datasets/detection3d/kitti/'
-#     }))
-
-db_sampler = dict(
-    data_root=data_root,
-    info_path=data_root + 'kitti_dbinfos_train.pkl',
-    rate=1.0,
-    prepare=dict(
-        filter_by_difficulty=[-1],
-        filter_by_min_points=dict(Car=5, Cyclist=5)),
-    classes=class_names,
-    sample_groups=dict(Car=12,Cyclist=6),
-    points_loader=dict(
-        type='LoadPointsFromFile',
-        coord_type='LIDAR',
-        load_dim=4,
-        use_dim=4,
-        file_client_args=file_client_args),
-    file_client_args=file_client_args)
+#     backend='petrel', path_mapping=dict(data='s3://kitti_data/'))
 
 train_pipeline = [
     dict(
@@ -128,51 +104,35 @@ data = dict(
             data_root=data_root,
             ann_file=data_root + 'kitti_infos_train.pkl',
             split='training',
-            pts_prefix='velodyne',
+            pts_prefix='velodyne_reduced',
             pipeline=train_pipeline,
             modality=input_modality,
             classes=class_names,
             test_mode=False,
             # we use box_type_3d='LiDAR' in kitti and nuscenes dataset
             # and box_type_3d='Depth' in sunrgbd and scannet dataset.
-            box_type_3d='LiDAR',
-            file_client_args=file_client_args)),
+            box_type_3d='LiDAR')),
     val=dict(
         type=dataset_type,
         data_root=data_root,
         ann_file=data_root + 'kitti_infos_val.pkl',
-        split='testing',
-        pts_prefix='velodyne',
+        split='training',
+        pts_prefix='velodyne_reduced',
         pipeline=test_pipeline,
         modality=input_modality,
         classes=class_names,
         test_mode=True,
-        box_type_3d='LiDAR',
-        file_client_args=file_client_args),
+        box_type_3d='LiDAR'),
     test=dict(
         type=dataset_type,
         data_root=data_root,
         ann_file=data_root + 'kitti_infos_val.pkl',
-        split='testing',
-        pts_prefix='velodyne',
+        split='training',
+        pts_prefix='velodyne_reduced',
         pipeline=test_pipeline,
         modality=input_modality,
         classes=class_names,
         test_mode=True,
-        box_type_3d='LiDAR',
-        file_client_args=file_client_args))
+        box_type_3d='LiDAR'))
 
-val_evaluator = dict(
-    type='KittiMetric',
-    ann_file=data_root + 'kitti_infos_val.pkl',
-    metric='bbox')
-
-#evaluation = dict(interval=1, pipeline=eval_pipeline, evaluator=val_evaluator)
 evaluation = dict(interval=1, pipeline=eval_pipeline)
-
-
-#val_evaluator = dict(
-#    type='KittiMetric',
-#    ann_file=data_root + 'kitti_infos_val.pkl',
-#    metric='bbox')
-#test_evaluator = val_evaluator

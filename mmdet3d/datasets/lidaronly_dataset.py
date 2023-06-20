@@ -19,7 +19,7 @@ from .pipelines import Compose
 
 
 @DATASETS.register_module()
-class KittiDataset(Custom3DDataset):
+class LidarOnlyDataset(Custom3DDataset):
     r"""KITTI Dataset.
 
     This class serves as the API for experiments on the `KITTI Dataset
@@ -53,7 +53,8 @@ class KittiDataset(Custom3DDataset):
             filter invalid predicted boxes.
             Default: [0, -40, -3, 70.4, 40, 0.0].
     """
-    CLASSES = ('car', 'pedestrian', 'cyclist')
+    CLASSES = ('car', 'cyclist')
+    #CLASSES = ('cyclist','car')
 
     def __init__(self,
                  data_root,
@@ -118,22 +119,19 @@ class KittiDataset(Custom3DDataset):
         """
         info = self.data_infos[index]
         sample_idx = info['image']['image_idx']
-        img_filename = os.path.join(self.data_root,
-                                    info['image']['image_path'])
+        #img_filename = os.path.join(self.data_root, info['image']['image_path'])
 
         # TODO: consider use torch.Tensor only
-        rect = info['calib']['R0_rect'].astype(np.float32)
-        Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
-        P2 = info['calib']['P2'].astype(np.float32)
-        lidar2img = P2 @ rect @ Trv2c
+        #rect = info['calib']['R0_rect'].astype(np.float32)
+        #Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
+        #P2 = info['calib']['P2'].astype(np.float32)
+        #lidar2img = P2 @ rect @ Trv2c
 
         pts_filename = self._get_pts_filename(sample_idx)
         input_dict = dict(
             sample_idx=sample_idx,
             pts_filename=pts_filename,
-            img_prefix=None,
-            img_info=dict(filename=img_filename),
-            lidar2img=lidar2img)
+            img_prefix=None)
 
         if not self.test_mode:
             annos = self.get_ann_info(index)
@@ -161,9 +159,10 @@ class KittiDataset(Custom3DDataset):
         """
         # Use index to get the annos, thus the evalhook could also use this api
         info = self.data_infos[index]
-        rect = info['calib']['R0_rect'].astype(np.float32)
-        Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
+        #rect = info['calib']['R0_rect'].astype(np.float32)
+        #Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
 
+        """
         if 'plane' in info:
             # convert ground plane to velodyne coordinates
             reverse = np.linalg.inv(rect @ Trv2c)
@@ -180,27 +179,49 @@ class KittiDataset(Custom3DDataset):
             plane_lidar[:3] = plane_norm_lidar
             plane_lidar[3] = -plane_norm_lidar.T @ plane_off_lidar
         else:
-            plane_lidar = None
+        """
+        plane_lidar = None
 
-        difficulty = info['annos']['difficulty']
+        #difficulty = info['annos']['difficulty']
         annos = info['annos']
         # we need other objects to avoid collision when sample
         annos = self.remove_dontcare(annos)
         loc = annos['location']
+        #print(loc)
         dims = annos['dimensions']
         rots = annos['rotation_y']
         gt_names = annos['name']
-        gt_bboxes_3d = np.concatenate([loc, dims, rots[..., np.newaxis]],
-                                      axis=1).astype(np.float32)
+        #gt_bboxes_3d = np.concatenate([loc, dims, rots[..., np.newaxis]],
+        #                              axis=1).astype(np.float32)
 
+        #das hier muss angepasst werden um die bboxes_3d von camera zu velodyne coordinates zu konvertieren
+        #loc_velodyne = [[line[2], line[-0], line[-1]] for line in loc]
+        #loc_velodyne =  np.array([float(x) for x in loc]).reshape(-1, 3)[:, [2, -0, -1]]
+        loc_velodyne = np.array([[x[2], -x[0], -x[1]] for x in loc])
+        #loc_velodyne = np.array(loc).reshape(-1,3)[:, [2, -0, -1]]
+        #print(loc)
+        #print(loc_velodyne)
+
+        #print(dims)
+        dim_velodyne =  np.array([[x[2], x[0], x[1]] for x in dims])
+        #print(dim_velodyne)
+        gt_bboxes_3d_velodyne = np.concatenate([loc_velodyne, dim_velodyne, rots[..., np.newaxis]],
+                                      axis=1).astype(np.float32)
         # convert gt_bboxes_3d to velodyne coordinates
         #gt_bboxes_3d = CameraInstance3DBoxes(gt_bboxes_3d).convert_to(
         #    self.box_mode_3d, np.linalg.inv(rect @ Trv2c))
 
+        #gt_bboxes_3d = LiDARInstance3DBoxes(
+        #    gt_bboxes_3d,
+        #    box_dim=gt_bboxes_3d.shape[-1],
+        #    #origin=(0.0, 0.0, 0.0)) #0.5, 0.5, 0
+        #    origin=(0.5, 0.5, 0.0))
+
         gt_bboxes_3d = LiDARInstance3DBoxes(
-            gt_bboxes_3d,
-            box_dim=gt_bboxes_3d.shape[-1],
-            origin=(0.0, 0.0, 0.0))
+            gt_bboxes_3d_velodyne,
+            box_dim=gt_bboxes_3d_velodyne.shape[-1],
+            #origin=(0.0, 0.0, 0.0)) #0.5, 0.5, 0
+            origin=(0.5, 0.5, 0.0))
         gt_bboxes = annos['bbox']
 
         selected = self.drop_arrays_by_name(gt_names, ['DontCare'])
@@ -223,7 +244,8 @@ class KittiDataset(Custom3DDataset):
             labels=gt_labels,
             gt_names=gt_names,
             plane=plane_lidar,
-            difficulty=difficulty)
+            #difficulty=difficulty
+            )
         return anns_results
 
     def drop_arrays_by_name(self, gt_names, used_classes):
@@ -323,7 +345,7 @@ class KittiDataset(Custom3DDataset):
                         submission_prefix_)
                 result_files[name] = result_files_
         else:
-            result_files = self.bbox2result_kitti(outputs, self.CLASSES,
+            result_files = self.bbox2result_kitti(outputs, self.CLASSES, #das hier wird aufgerufen
                                                   pklfile_prefix,
                                                   submission_prefix)
         return result_files, tmp_dir
@@ -362,13 +384,13 @@ class KittiDataset(Custom3DDataset):
             dict[str, float]: Results of each evaluation metric.
         """
         result_files, tmp_dir = self.format_results(results, pklfile_prefix)
-        from mmdet3d.core.evaluation import kitti_eval
+        from mmdet3d.core.evaluation import kitti_eval, kitti_eval_coco_style, get_official_eval_result
         gt_annos = [info['annos'] for info in self.data_infos]
 
         if isinstance(result_files, dict):
             ap_dict = dict()
             for name, result_files_ in result_files.items():
-                eval_types = ['bbox', 'bev', '3d']
+                eval_types = ['bev', '3d']
                 if 'img' in name:
                     eval_types = ['bbox']
                 ap_result_str, ap_dict_ = kitti_eval(
@@ -376,6 +398,7 @@ class KittiDataset(Custom3DDataset):
                     result_files_,
                     self.CLASSES,
                     eval_types=eval_types)
+                
                 for ap_type, ap in ap_dict_.items():
                     ap_dict[f'{name}/{ap_type}'] = float('{:.4f}'.format(ap))
 
@@ -387,14 +410,19 @@ class KittiDataset(Custom3DDataset):
                 ap_result_str, ap_dict = kitti_eval(
                     gt_annos, result_files, self.CLASSES, eval_types=['bbox'])
             else:
-                ap_result_str, ap_dict = kitti_eval(gt_annos, result_files,
-                                                    self.CLASSES)
+                #ap_result_str, ap_dict = kitti_eval(gt_annos, result_files,
+                #                                    self.CLASSES)
+                print("Executed")
+                ap_result_str = get_official_eval_result(gt_annos, result_files, self.CLASSES) #hier geändert zu coco_style evaluation
             print_log('\n' + ap_result_str, logger=logger)
 
         if tmp_dir is not None:
             tmp_dir.cleanup()
         if show or out_dir:
             self.show(results, out_dir, show=show, pipeline=pipeline)
+        #return ap_dict
+        ap_dict = dict()
+        ap_dict["ap_scores"] = ap_result_str
         return ap_dict
     
     def do_transform(self, pc, R, T):
@@ -482,7 +510,7 @@ class KittiDataset(Custom3DDataset):
             annos = []
             info = self.data_infos[idx]
             sample_idx = info['image']['image_idx']
-            image_shape = info['image']['image_shape'][:2]
+            #image_shape = info['image']['image_shape'][:2]
             box_dict = self.convert_valid_bboxes(pred_dicts, info)
             anno = {
                 'name': [],
@@ -495,26 +523,36 @@ class KittiDataset(Custom3DDataset):
                 'rotation_y': [],
                 'score': []
             }
-            if len(box_dict['bbox']) > 0:
-                box_2d_preds = box_dict['bbox']
+            #if len(box_dict['bbox']) > 0: #changed this to bbox3d_lidar because bbox are empty(we have no calib information)
+            if len(box_dict['box3d_lidar']) > 0:
+    
+                box_2d_preds = box_dict['bbox'] 
                 box_preds = box_dict['box3d_camera']
                 scores = box_dict['scores']
                 box_preds_lidar = box_dict['box3d_lidar']
                 label_preds = box_dict['label_preds']
 
-                for box, box_lidar, bbox, score, label in zip(
-                        box_preds, box_preds_lidar, box_2d_preds, scores,
-                        label_preds):
-                    bbox[2:] = np.minimum(bbox[2:], image_shape[::-1])
-                    bbox[:2] = np.maximum(bbox[:2], [0, 0])
+                #for box, box_lidar, bbox, score, label in zip(
+                #        box_preds, box_preds_lidar, box_2d_preds, scores,
+                #        label_preds):
+
+                for box, box_lidar, score, label in zip(
+                        box_preds,
+                        box_preds_lidar, scores,
+                        label_preds):        
+                    #bbox[2:] = np.minimum(bbox[2:], image_shape[::-1])
+                    #bbox[:2] = np.maximum(bbox[:2], [0, 0])
                     anno['name'].append(class_names[int(label)])
                     anno['truncated'].append(0.0)
                     anno['occluded'].append(0)
                     anno['alpha'].append(
-                        -np.arctan2(-box_lidar[1], box_lidar[0]) + box[6])
-                    anno['bbox'].append(bbox)
-                    anno['dimensions'].append(box_lidar[3:6])
-
+                        #-np.arctan2(-box_lidar[1], box_lidar[0]) + box[6])
+                        -np.arctan2(-box_lidar[1], box_lidar[0]))
+                    #anno['bbox'].append(bbox)
+                    anno['bbox'].append(np.array([-1,-1,-1,-1]))
+                    #anno['dimensions'].append(box_lidar[3:6])
+                    anno['dimensions'].append(box[3:6])
+                    
                     """
                     #static_translation, static_rotation = self.load_static_tf("/globalwork/data/6GEM/bagfile_112022/tf_static_msg/tf_static.txt", "vehicles/Player02/lidar_link")
                     static_translation, static_rotation = self.load_static_tf("/globalwork/data/6GEM/2022-05-19_vlp_32_less_pedestrians/Training/scene1/scene1_01/tf_static/tf_static.txt", "vehicles/Ego/velodyne_link")
@@ -535,8 +573,12 @@ class KittiDataset(Custom3DDataset):
                     box_lidar[:3] = pc_xyz_map.T
                     """
 
-                    anno['location'].append(box_lidar[:3])
-                    anno['rotation_y'].append(box_lidar[6])
+                    #anno['location'].append(box_lidar[:3])
+                    anno['location'].append(box[:3])
+
+                    #anno['rotation_y'].append(box_lidar[6])
+                    anno['rotation_y'].append(box[6])
+
                     anno['score'].append(score)
 
                 anno = {k: np.stack(v) for k, v in anno.items()}
@@ -727,6 +769,7 @@ class KittiDataset(Custom3DDataset):
         box_preds = box_dict['boxes_3d']
         scores = box_dict['scores_3d']
         labels = box_dict['labels_3d']
+        #print(labels)
         sample_idx = info['image']['image_idx']
         box_preds.limit_yaw(offset=0.5, period=np.pi * 2)
 
@@ -739,37 +782,71 @@ class KittiDataset(Custom3DDataset):
                 label_preds=np.zeros([0, 4]),
                 sample_idx=sample_idx)
 
-        rect = info['calib']['R0_rect'].astype(np.float32)
-        Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
-        P2 = info['calib']['P2'].astype(np.float32)
-        img_shape = info['image']['image_shape']
-        P2 = box_preds.tensor.new_tensor(P2)
+        #rect = info['calib']['R0_rect'].astype(np.float32)
+        #rect = np.array([[ 0.9999239 ,  0.00983776, -0.00744505,  0.        ],[-0.0098698 ,  0.9999421 , -0.00427846,  0.        ],[ 0.00740253,  0.00435161,  0.9999631 ,  0.        ],[ 0.        ,  0.        ,  0.        ,  1.        ]]).astype(np.float32)
+        #Trv2c = info['calib']['Tr_velo_to_cam'].astype(np.float32)
+        #Trv2c = np.array([[ 7.533745e-03, -9.999714e-01, -6.166020e-04, -4.069766e-03],[ 1.480249e-02,  7.280733e-04, -9.998902e-01, -7.631618e-02],[ 9.998621e-01,  7.523790e-03,  1.480755e-02, -2.717806e-01],[ 0.000000e+00,  0.000000e+00,  0.000000e+00,  1.000000e+00]]).astype(np.float32)
+        #P2 = info['calib']['P2'].astype(np.float32)
+        #P2 = np.array([[7.215377e+02, 0.000000e+00, 6.095593e+02, 4.485728e+01],[0.000000e+00, 7.215377e+02, 1.728540e+02, 2.163791e-01],[0.000000e+00, 0.000000e+00, 1.000000e+00, 2.745884e-03],[0.000000e+00, 0.000000e+00, 0.000000e+00, 1.000000e+00]]).astype(np.float32)
+        #img_shape = info['image']['image_shape'] #512x1024 for the 5player intersection set
+        #img_shape = np.array([512, 1024]).astype(np.int32)
+        #P2 = box_preds.tensor.new_tensor(P2)
 
-        box_preds_camera = box_preds.convert_to(Box3DMode.CAM, rect @ Trv2c)
+        #box_preds_camera = box_preds.convert_to(Box3DMode.CAM, rect @ Trv2c)
 
-        box_corners = box_preds_camera.corners
-        box_corners_in_image = points_cam2img(box_corners, P2)
+        #box_corners = box_preds_camera.corners
+        #box_corners_in_image = points_cam2img(box_corners, P2)
         # box_corners_in_image: [N, 8, 2]
-        minxy = torch.min(box_corners_in_image, dim=1)[0]
-        maxxy = torch.max(box_corners_in_image, dim=1)[0]
-        box_2d_preds = torch.cat([minxy, maxxy], dim=1)
+        #minxy = torch.min(box_corners_in_image, dim=1)[0]
+        #maxxy = torch.max(box_corners_in_image, dim=1)[0]
+        #box_2d_preds = torch.cat([minxy, maxxy], dim=1)
         # Post-processing
         # check box_preds_camera
-        image_shape = box_preds.tensor.new_tensor(img_shape)
-        valid_cam_inds = ((box_2d_preds[:, 0] < image_shape[1]) &
-                          (box_2d_preds[:, 1] < image_shape[0]) &
-                          (box_2d_preds[:, 2] > 0) & (box_2d_preds[:, 3] > 0))
+        #image_shape = box_preds.tensor.new_tensor(img_shape)
+        #valid_cam_inds = ((box_2d_preds[:, 0] < image_shape[1]) &
+        #                  (box_2d_preds[:, 1] < image_shape[0]) &
+        #                  (box_2d_preds[:, 2] > 0) & (box_2d_preds[:, 3] > 0))
         # check box_preds
-        limit_range = box_preds.tensor.new_tensor(self.pcd_limit_range)
+
+
+        #if isinstance(box_preds, LiDARInstance3DBoxes):
+        #    box_preds_camera = box_preds.convert_to(Box3DMode.CAM)
+        #    box_preds_lidar = box_preds
+        #elif isinstance(box_preds, CameraInstance3DBoxes):
+        #    box_preds_camera = box_preds
+        #    box_preds_lidar = box_preds.convert_to(Box3DMode.LIDAR)
+
+
+        limit_range = box_preds.tensor.new_tensor(self.pcd_limit_range) #assumption box_preds is in Lidar Coordinate Frame
         valid_pcd_inds = ((box_preds.center > limit_range[:3]) &
                           (box_preds.center < limit_range[3:]))
-        valid_inds = valid_cam_inds & valid_pcd_inds.all(-1)
+        #valid_inds = valid_cam_inds & valid_pcd_inds.all(-1)
+        valid_inds = valid_pcd_inds.all(-1)
+
+        box_preds_camera = box_preds.tensor.numpy()
+        #print(box_preds_camera.shape)
+        #print(box_preds_camera)
+        #print(valid_inds)
+        if box_preds_camera.ndim == 1:
+            box_preds_camera = np.expand_dims(box_preds_camera, axis=0)
+        box_preds_camera[:, :3] = np.array([[-float(x[1]), -float(x[2]),float(x[0])] for x in box_preds_camera])
+        #print(box_preds_camera[:, :3])
+        box_preds_camera[:, 3:6] = np.array([[float(x[4]), float(x[5]),float(x[3])] for x in box_preds_camera])
+        #print(box_preds_camera)
+        box_preds_lidar = box_preds
+
+        if valid_inds.all():
+            box3d_camera_return = box_preds_camera
+        else:
+            box3d_camera_return = box_preds_camera[valid_inds]
 
         if valid_inds.sum() > 0:
             return dict(
-                bbox=box_2d_preds[valid_inds, :].numpy(),
-                box3d_camera=box_preds_camera[valid_inds].tensor.numpy(),
-                box3d_lidar=box_preds[valid_inds].tensor.numpy(),
+                #bbox=box_2d_preds[valid_inds, :].numpy(),
+                #box3d_camera=box_preds_camera[valid_inds].tensor.numpy(),
+                bbox=np.zeros([0, 4]),
+                box3d_camera=box3d_camera_return,
+                box3d_lidar=box_preds_lidar[valid_inds].tensor.numpy(),
                 scores=scores[valid_inds].numpy(),
                 label_preds=labels[valid_inds].numpy(),
                 sample_idx=sample_idx)

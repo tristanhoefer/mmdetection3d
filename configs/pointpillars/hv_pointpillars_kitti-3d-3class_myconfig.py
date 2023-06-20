@@ -6,11 +6,16 @@ _base_ = [
 
 #point_cloud_range = [53.335594, -156.8649, -0.00033486407, 279.4691, 1.9748741, 19.15723] das sind die genauen
 #point_cloud_range = [54.335594, -157.8649, -0.00333486407, 280.4691, 2.9748741, 20.15723]
-point_cloud_range=[-1000, -1000, -1000, 1000, 1000, 1000]
+#point_cloud_range=[-1000, -1000, -1000, 1000, 1000, 1000]
+point_cloud_range=[0, -39.68, -3, 69.12, 39.68, 1]
 
 # dataset settings
-data_root = '/home/hoefer/Documents/mmdetection3d/data/5player_intersection/'
+data_root = '/home/hoefer/Documents/mmdetection3d/data/Pointpillar_Finetuning/'
 class_names = ['Pedestrian', 'Cyclist', 'Car']
+#class_names = ['Cyclist', 'Car']
+#class_names = ['Car']
+
+
 # PointPillars adopted a different sampling strategies among classes
 
 file_client_args = dict(backend='disk')
@@ -32,9 +37,9 @@ db_sampler = dict(
     rate=1.0,
     prepare=dict(
         filter_by_difficulty=[-1],
-        filter_by_min_points=dict(Car=5, Pedestrian=5, Cyclist=5)),
+        filter_by_min_points=dict(Car=5, Cyclist=15)),
     classes=class_names,
-    sample_groups=dict(Car=15, Pedestrian=15, Cyclist=15),
+    sample_groups=dict(Car=15, Cyclist=5),
     points_loader=dict(
         type='LoadPointsFromFile',
         coord_type='LIDAR',
@@ -116,4 +121,11 @@ optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 runner = dict(max_epochs=80)
 
 # Use evaluation interval=2 reduce the number of evaluation timese
-evaluation = dict(interval=2)
+evaluation = dict(interval=1)
+
+#train_cfg = dict(
+#    type='EpochBasedTrainLoop',
+#    max_epochs=80,
+#    val_interval=2)
+#val_cfg = dict(type='ValLoop')
+#test_cfg = dict(type='TestLoop')

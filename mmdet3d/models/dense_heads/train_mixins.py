@@ -137,7 +137,7 @@ class AnchorTrainMixin(object):
                     -1, self.box_code_size)
                 current_anchor_num += current_anchors.size(0)
                 if self.assign_per_class:
-                    gt_per_cls = (gt_labels == i)
+                    gt_per_cls = (gt_labels == i).cpu() #fix for the issue: RuntimeError: indices should be either on cpu or on the same device as the indexed tensor (cpu)
                     anchor_targets = self.anchor_target_single_assigner(
                         assigner, current_anchors, gt_bboxes[gt_per_cls, :],
                         gt_bboxes_ignore, gt_labels[gt_per_cls], input_meta,
