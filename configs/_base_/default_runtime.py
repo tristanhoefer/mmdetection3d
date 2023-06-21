@@ -3,11 +3,15 @@ checkpoint_config = dict(interval=1)
 # By default we use textlogger hook and tensorboard
 # For more loggers see
 # https://mmcv.readthedocs.io/en/latest/api.html#mmcv.runner.LoggerHook
+
+import wandb
+
 log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
-        dict(type='TensorboardLoggerHook')
+        dict(type='TensorboardLoggerHook'),
+        dict(type="WandbLoggerHook")
     ])
 # yapf:enable
 dist_params = dict(backend='nccl')

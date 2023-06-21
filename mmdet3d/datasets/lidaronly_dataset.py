@@ -410,10 +410,10 @@ class LidarOnlyDataset(Custom3DDataset):
                 ap_result_str, ap_dict = kitti_eval(
                     gt_annos, result_files, self.CLASSES, eval_types=['bbox'])
             else:
-                #ap_result_str, ap_dict = kitti_eval(gt_annos, result_files,
-                #                                    self.CLASSES)
+                ap_result_str, ap_dict = kitti_eval(gt_annos, result_files,
+                                                    self.CLASSES)
                 print("Executed")
-                ap_result_str = get_official_eval_result(gt_annos, result_files, self.CLASSES) #hier geändert zu coco_style evaluation
+                #ap_result_str = get_official_eval_result(gt_annos, result_files, self.CLASSES) #hier geändert zu coco_style evaluation
             print_log('\n' + ap_result_str, logger=logger)
 
         if tmp_dir is not None:
@@ -421,8 +421,8 @@ class LidarOnlyDataset(Custom3DDataset):
         if show or out_dir:
             self.show(results, out_dir, show=show, pipeline=pipeline)
         #return ap_dict
-        ap_dict = dict()
-        ap_dict["ap_scores"] = ap_result_str
+        #ap_dict = dict()
+        #ap_dict["ap_scores"] = ap_result_str
         return ap_dict
     
     def do_transform(self, pc, R, T):
