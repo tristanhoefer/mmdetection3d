@@ -1,16 +1,16 @@
 _base_ = [
-    '../_base_/models/hv_pointpillars_secfpn_kitti_myconfig.py',
-    '../_base_/datasets/kitti-3d-3class_myconfig.py',
+    '../_base_/models/hv_pointpillars_secfpn_kitti_carla.py',
+    '../_base_/datasets/kitti-3d-car_carla.py',
     '../_base_/schedules/cyclic_40e.py', '../_base_/default_runtime.py'
 ]
 
 #point_cloud_range = [53.335594, -156.8649, -0.00033486407, 279.4691, 1.9748741, 19.15723] das sind die genauen
 #point_cloud_range = [54.335594, -157.8649, -0.00333486407, 280.4691, 2.9748741, 20.15723]
 #point_cloud_range=[-1000, -1000, -1000, 1000, 1000, 1000]
-point_cloud_range=[0, -39.68, -3, 69.12, 39.68, 1]
+point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 4]
 
 # dataset settings
-data_root = '/home/hoefer/Documents/mmdetection3d/data/Pointpillar_Finetuning/'
+data_root = '/path/to/CARLA'
 class_names = ['Pedestrian', 'Cyclist', 'Car']
 #class_names = ['Cyclist', 'Car']
 #class_names = ['Car']
@@ -118,7 +118,7 @@ optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # PointPillars usually need longer schedule than second, we simply double
 # the training schedule. Do remind that since we use RepeatDataset and
 # repeat factor is 2, so we actually train 160 epochs.
-runner = dict(max_epochs=120)
+runner = dict(max_epochs=80)
 
 # Use evaluation interval=2 reduce the number of evaluation timese
 evaluation = dict(interval=1)

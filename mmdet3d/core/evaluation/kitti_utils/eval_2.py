@@ -858,11 +858,11 @@ def get_official_eval_result(gt_annos,
     result = ''
     # check whether alpha is valid
     compute_aos = False
-    for anno in dt_annos:
-        if anno['alpha'].shape[0] != 0:
-            if anno['alpha'][0] != -10:
-                compute_aos = True
-            break
+    #for anno in dt_annos:
+    #    if anno['alpha'].shape[0] != 0:
+    #        if anno['alpha'][0] != -10:
+    #            compute_aos = True
+    #        break
     metrics = do_eval_v3(
         gt_annos,
         dt_annos,
@@ -950,11 +950,11 @@ def get_coco_eval_result(gt_annos,
     result = ''
     # check whether alpha is valid
     compute_aos = False
-    for anno in dt_annos:
-        if anno['alpha'].shape[0] != 0:
-            if anno['alpha'][0] != -10:
-                compute_aos = True
-            break
+    #for anno in dt_annos:
+    #    if anno['alpha'].shape[0] != 0:
+    #        if anno['alpha'][0] != -10:
+    #            compute_aos = True
+    #        break
     mAPbbox, mAPbev, mAP3d, mAPaos = do_coco_style_eval(
         gt_annos,
         dt_annos,

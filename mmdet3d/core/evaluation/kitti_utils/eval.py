@@ -781,7 +781,7 @@ def kitti_eval(gt_annos,
         if anno['alpha'][0] != -10:
             valid_alpha_gt = True
             break
-    compute_aos = (pred_alpha and valid_alpha_gt)
+    compute_aos = False
     if compute_aos:
         eval_types.append('aos')
 
@@ -984,11 +984,11 @@ def kitti_eval_coco_style(gt_annos, dt_annos, current_classes):
     result = ''
     # check whether alpha is valid
     compute_aos = False
-    for anno in dt_annos:
-        if anno['alpha'].shape[0] != 0:
-            if anno['alpha'][0] != -10:
-                compute_aos = True
-            break
+    #for anno in dt_annos:
+    #    if anno['alpha'].shape[0] != 0:
+    #        if anno['alpha'][0] != -10:
+    #            compute_aos = True
+    #        break
     mAPbbox, mAPbev, mAP3d, mAPaos = do_coco_style_eval(
         gt_annos, dt_annos, current_classes, overlap_ranges, compute_aos)
     for j, curcls in enumerate(current_classes):

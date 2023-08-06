@@ -391,8 +391,8 @@ class LidarOnlyDataset(Custom3DDataset):
             ap_dict = dict()
             for name, result_files_ in result_files.items():
                 eval_types = ['bev', '3d']
-                if 'img' in name:
-                    eval_types = ['bbox']
+                #if 'img' in name:
+                #    eval_types = ['bbox']
                 ap_result_str, ap_dict_ = kitti_eval(
                     gt_annos,
                     result_files_,
