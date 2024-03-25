@@ -626,6 +626,10 @@ def eval_class(gt_annos,
         'orientation': aos,
     }
 
+    print(ret_dict)
+    print(recall)
+    print(precision)
+
     # clean temp variables
     del overlaps
     del parted_overlaps

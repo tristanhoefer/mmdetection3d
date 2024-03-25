@@ -1,7 +1,7 @@
 # model settings
 _base_ = './hv_pointpillars_kitti-3d-3class_carla.py'
 
-point_cloud_range = [0, -39.68, -1, 69.12, 39.68, 4]
+point_cloud_range = [0, -39.68, -1, 69.12, 39.68, 3]
 model = dict(
     bbox_head=dict(
         type='Anchor3DHead',
@@ -9,8 +9,8 @@ model = dict(
         anchor_generator=dict(
             _delete_=True,
             type='AlignedAnchor3DRangeGenerator',
-            ranges=[[0, -39.68, -1.78, 69.12, 39.68, -1.78]],
-            sizes=[[3.9, 1.6, 1.56]],
+            ranges=[[0, -39.68, 0, 69.12, 39.68, 0]],
+            sizes=[[4.7, 1.65, 1.9]],
             rotations=[0, 1.57],
             reshape_out=True)),
     # model training and testing settings

@@ -1,8 +1,8 @@
 voxel_size = [0.16, 0.16, 4]
-#voxel_size = [0.64, 0.64, 8]
+#voxel_size = [0.24, 0.24, 6]
 #voxel_size = [5, 5, 50]
 #voxel_size = [3, 3, 30]
-#voxel_size = [0.32, 0.32, 6]
+#voxel_size = [0.25, 0.25, 4]
 model = dict(
     type='VoxelNet',
     voxel_layer=dict(
@@ -10,10 +10,12 @@ model = dict(
         #point_cloud_range=[60.25, 65, -1.15, 135, 145, 3],
         #point_cloud_range=[200, 76, -1.15, 270, 156, 3],
         #point_cloud_range=[0, -39.68, -2.45, 75, 39.68, 1], 
-        point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 4],
-        #point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 3],
+        #point_cloud_range=[0, -39.68, -2, 69.12, 39.68, 3],
+        point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 3],
         voxel_size=voxel_size,
-        max_voxels=(16000, 40000)  # (training, testing) max_voxels
+        #max_voxels=(16000, 40000)  # (training, testing) max_voxels
+        max_voxels=(25000, 50000)  # (training, testing) max_voxels
+        #max_voxels=(30000, 60000)
     ),
     voxel_encoder=dict(
         type='PillarFeatureNet',
@@ -21,7 +23,7 @@ model = dict(
         feat_channels=[64],
         with_distance=False,
         voxel_size=voxel_size,
-        point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 4]),
+        point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 3]),
 
     middle_encoder=dict(
         type='PointPillarsScatter', in_channels=64, output_shape=[496, 432]),
@@ -46,9 +48,9 @@ model = dict(
         anchor_generator=dict(
             type='AlignedAnchor3DRangeGenerator',
             ranges=[
-                [0, -39.68, -1, 69.12, 39.68, 4],
-                [0, -39.68, -1, 69.12, 39.68, 4],
-                [0, -39.68, -1, 69.12, 39.68, 4],
+                [0, -39.68, -1, 69.12, 39.68, 3],
+                [0, -39.68, -1, 69.12, 39.68, 3],
+                [0, -39.68, -1, 69.12, 39.68, 3],
             ],
             sizes=[[0.8, 0.6, 1.73], [1.76, 0.6, 1.73], [3.9, 1.6, 1.56]],
             rotations=[0, 1.57],
@@ -96,7 +98,7 @@ model = dict(
         use_rotate_nms=True,
         nms_across_levels=False,
         nms_thr=0.01,
-        score_thr=0.3,
+        score_thr=0.00,
         min_bbox_size=0,
         nms_pre=100,
         max_num=50))

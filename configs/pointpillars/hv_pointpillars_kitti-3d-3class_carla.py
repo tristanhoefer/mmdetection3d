@@ -7,7 +7,7 @@ _base_ = [
 #point_cloud_range = [53.335594, -156.8649, -0.00033486407, 279.4691, 1.9748741, 19.15723] das sind die genauen
 #point_cloud_range = [54.335594, -157.8649, -0.00333486407, 280.4691, 2.9748741, 20.15723]
 #point_cloud_range=[-1000, -1000, -1000, 1000, 1000, 1000]
-point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 4]
+point_cloud_range=[0, -39.68, -1, 69.12, 39.68, 3]
 
 # dataset settings
 data_root = '/path/to/CARLA'

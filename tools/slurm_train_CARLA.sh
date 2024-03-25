@@ -10,7 +10,7 @@ set -x
 PARTITION="reissdorf"
 JOB_NAME="carla_simdata"
 CONFIG="configs/pointpillars/hv_pointpillars_secfpn_6x8_160e_kitti-3d-car_carla.py"
-WORK_DIR="/globalwork/data/6GEM/CARLA_082023_Finetuning/Experiments/"
+WORK_DIR="/globalwork/data/6GEM/CARLA_082023_Finetuning/Experiments/2108_Town10Val/"
 GPUS=${GPUS:-8}
 GPUS_PER_NODE=${GPUS_PER_NODE:-8}
 CPUS_PER_TASK=${CPUS_PER_TASK:-5}

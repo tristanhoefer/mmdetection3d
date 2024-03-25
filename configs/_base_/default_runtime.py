@@ -16,10 +16,10 @@ log_config = dict(
 # yapf:enable
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = "/globalwork/data/6GEM/2022-05-19_vlp_32_less_pedestrians/Experiments/"
+work_dir = "/globalwork/data/6GEM/CARLA_082023_Finetuning/Experiments/0808_YawAngleCorrected_Town05Val_fromScratch/"
 #load_from = "/home/hoefer/Documents/mmdetection3d/checkpoints/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class_20220301_150306-37dc2420.pth"
-#load_from = "/home/hoefer/Documents/mmdetection3d/checkpoints/hv_pointpillars_secfpn_6x8_160e_kitti-3d-car_20220331_134606-d42d15ed.pth"
-load_from = None
+load_from = "/home/hoefer/Documents/mmdetection3d/checkpoints/hv_pointpillars_secfpn_6x8_160e_kitti-3d-car_20220331_134606-d42d15ed.pth"
+#load_from = None
 resume_from = None
 workflow = [('train', 1)]
 
